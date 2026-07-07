@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aerobase — Ingredient Intelligence | TerraOS Materials</title>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<style>
+  body{margin:0; font-family:sans-serif;}
+  #root{min-height:100vh;}
+  #diag{padding:20px; background:#fff3f3; border:2px solid #c00; margin:20px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; color:#900; display:none;}
+</style>
+</head>
+<body>
+<div id="diag"></div>
+<div id="root">Loading…</div>
+<script>
+  // Surface ANY error directly on the page, since remote console access isn't available
+  function showError(label, err) {
+    var d = document.getElementById('diag');
+    d.style.display = 'block';
+    d.textContent += '\n=== ' + label + ' ===\n' + (err && err.stack ? err.stack : String(err)) + '\n';
+  }
+  window.onerror = function(msg, src, line, col, err) {
+    showError('window.onerror', (err ? err.stack : msg) + ' (line ' + line + ':' + col + ')');
+  };
+  window.addEventListener('unhandledrejection', function(e) {
+    showError('unhandledrejection', e.reason);
+  });
+</script>
+<script type="text/babel" data-presets="react" onerror="showError('babel script tag failed to load/parse', event)">
+const { useState } = React;
+
+// ── Static data ───────────────────────────────────────────────────────────────
+
+const LAYER_META = {
+  drainage: {label:"DRAINAGE BASE",       accent:"#C4956A",bg:"#100C07"},
+  aeration: {label:"AERATION + STRUCTURE",accent:"#D4B480",bg:"#15110A"},
+  retention:{label:"WATER RETENTION",     accent:"#6BBFA0",bg:"#0A1510"},
+  nutrition:{label:"NUTRITION + BIOLOGY", accent:"#8BC47A",bg:"#0B1409"},
+  chemistry:{label:"CHEMISTRY",           accent:"#E8B84B",bg:"#141008"},
+  planting: {label:"APPLIED AT PLANTING",accent:"#B09BE8",bg:"#0D0B18"},
+};
+const LAYER_ORDER = ["planting","chemistry","nutrition","retention","aeration","drainage"];
+
+const SL = {
+  mulch:    {label:"MULCH",     accent:"#8BC47A",bg:"#0B1409"},
+  rootzone: {label:"ROOT ZONE", accent:"#6BBFA0",bg:"#0A1510"},
+  chemistry:{label:"CHEMISTRY", accent:"#E8B84B",bg:"#141008"},
+  planting: {label:"PLANTING",  accent:"#B09BE8",bg:"#0D0B18"},
+  drainage: {label:"DRAINAGE",  accent:"#C4956A",bg:"#100C07"},
+};
+const SLO = ["mulch","rootzone","chemistry","planting","drainage"];
+
+const ENV = [
+  {id:"s1", name:"S1", title:"Ultra Aerated",   accent:"#D4A853",
+   grad:"linear-gradient(90deg,#C4852A,#D4A853)",desc:"Maximum oxygen, minimal water retention.",
+   perf:{afp:[35,45],whc:[20,30],bd:[600,900],om:[5,10],ph:[6.5,7.5],irr:"Daily – every 2 days",dots:5}},
+  {id:"s15",name:"S1.5",title:"Aerated Tropical",accent:"#C49848",
+   grad:"linear-gradient(90deg,#C49848,#8BAE6A)",desc:"High aeration with moderate moisture.",
+   perf:{afp:[25,35],whc:[35,50],bd:[700,1000],om:[15,25],ph:[6.0,7.0],irr:"Every 2–4 days",dots:4}},
+  {id:"s2", name:"S2", title:"Balanced Tropical",accent:"#6BBFA0",
+   grad:"linear-gradient(90deg,#8BAE6A,#6BBFA0)",desc:"Balanced oxygen and moisture.",
+   perf:{afp:[20,30],whc:[45,60],bd:[350,550],om:[20,35],ph:[5.8,6.8],irr:"Every 3–5 days",dots:3}},
+  {id:"s25",name:"S2.5",title:"Moisture Biased", accent:"#4A9A80",
+   grad:"linear-gradient(90deg,#6BBFA0,#3A8A70)",desc:"Moisture-forward for high-demand systems.",
+   perf:{afp:[12,20],whc:[55,70],bd:[280,420],om:[25,40],ph:[5.8,6.5],irr:"Every 5–8 days",dots:2}},
+  {id:"s3", name:"S3", title:"High Retention",   accent:"#2A7A60",
+   grad:"linear-gradient(90deg,#3A8A70,#1A6A50)",desc:"Maximum moisture retention.",
+   perf:{afp:[8,15],whc:[65,80],bd:[250,380],om:[30,50],ph:[5.5,6.5],irr:"Weekly or less",dots:1}},
+];
+
+const SYS = [
+  {id:"indoor_tropical", name:"Indoor Tropical",  env:"s2",
+   layers:{mulch:["neemcake"],rootzone:["cocopeat","vermicompost","corncob","vermiculite"],chemistry:["iron","epsom","npk","zinc"],planting:["mycorrhizal","trichoderma"],drainage:["prosopis_10","leca"]}},
+  {id:"balcony_tropical",name:"Balcony Tropical", env:"s2",
+   layers:{mulch:["bark","neemcake"],rootzone:["cocopeat","vermicompost","corncob"],chemistry:["epsom","npk","zinc","iron"],planting:["mycorrhizal","trichoderma"],drainage:["prosopis_10","prosopis_20"]}},
+  {id:"terrace_garden",  name:"Terrace Garden",   env:"s2",
+   layers:{mulch:["bark"],rootzone:["cocopeat","vermicompost","corncob","neemcake"],chemistry:["iron","epsom","npk"],planting:["mycorrhizal","trichoderma"],drainage:["prosopis_20"]}},
+  {id:"tree_pit",        name:"Tree Pit",          env:"s15",
+   layers:{mulch:["bark","husk"],rootzone:["soil","vermicompost","cowdung","corncob"],chemistry:["bonemeal","epsom","npk","zinc"],planting:["mycorrhizal","trichoderma","em"],drainage:["prosopis_20","prosopis_10"]}},
+  {id:"ground_landscape",name:"Ground Landscape",  env:"s15",
+   layers:{mulch:["bark","neemcake"],rootzone:["soil","vermicompost","cowdung","corncob"],chemistry:["bonemeal","npk","epsom","dap"],planting:["mycorrhizal","trichoderma"],drainage:["prosopis_20","sand"]}},
+  {id:"green_wall",      name:"Green Wall",         env:"s25",
+   layers:{mulch:["neemcake"],rootzone:["cocopeat","vermicompost","corncob","bark"],chemistry:["iron","epsom","npk","zinc"],planting:["mycorrhizal","trichoderma"],drainage:["prosopis_10","perlite"]}},
+];
+
+const ING = [
+  {id:"prosopis_20",name:"Prosopis Biochar",grade:"20–30mm",layer:"drainage",seed:11,
+   density:{range:"150–320",mid:235},usedIn:["terrace_garden","balcony_tropical","tree_pit","ground_landscape"],
+   role:"Coarse drainage skeleton. Permanent macro-channels. 10yr+ life.",window:"24–28% vol",over:"Above 30%, voids too large.",note:"Invasive Prosopis converted to permanent soil carbon.",
+   visual:{type:"chunks",base:"#0E0A06",count:8,minSz:9,maxSz:15,colors:["#1E1610","#161208","#241E14","#120E06","#1A1410"],edge:"#3A3028"}},
+  {id:"prosopis_10",name:"Prosopis Biochar",grade:"10–15mm",layer:"drainage",seed:22,
+   density:{range:"200–350",mid:275},usedIn:["indoor_tropical","balcony_tropical","tree_pit","green_wall"],
+   role:"Mid structural drainage. Near-direct LECA replacement.",window:"10–12% vol",over:"Ensure size separation from coarser grade.",note:"Permanent — unlike LECA which can be removed.",
+   visual:{type:"chunks",base:"#0C0806",count:12,minSz:5,maxSz:9,colors:["#1A1610","#14100A","#201A10","#100C08","#181210"],edge:"#2E2820"}},
+  {id:"leca",name:"LECA Balls",grade:"8–25mm",layer:"drainage",seed:33,
+   density:{range:"300–450",mid:375},usedIn:["indoor_tropical"],
+   role:"Structural drainage and root anchoring. Reusable.",window:"10–15% or 75mm base",over:"Above 20%, too many macro voids.",note:"Best as a dedicated base layer. Reusable.",
+   visual:{type:"balls",base:"#1A0E08",mid:"#A05030",light:"#C87050",dark:"#6A2E10"}},
+  {id:"corncob",name:"Corn Cob Biochar",grade:"1–4mm",layer:"aeration",seed:44,
+   density:{range:"280–420",mid:350},usedIn:["indoor_tropical","balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Perlite replacement. Aerates AND holds moisture inside pores.",window:"5–14% vol",over:"Above 18%, mix holds too much water.",note:"Reduce cocopeat slightly when increasing this.",
+   visual:{type:"granular",base:"#1A1208",minR:2,maxR:4.5,colors:["#8B7040","#7A6030","#9A7D48","#6A5028","#A07848"]}},
+  {id:"perlite",name:"Perlite",grade:"2–5mm",layer:"aeration",seed:55,
+   density:{range:"30–150",mid:100},usedIn:["green_wall"],
+   role:"Ultra-light inert aerator. Weight-critical mixes only.",window:"8–18% weight-critical",over:"Excess makes mix too dry.",note:"Corn cob replaces perlite in all other mixes.",
+   visual:{type:"granular",base:"#1C1C18",minR:2.5,maxR:5,colors:["#D8D4C8","#E8E4D8","#C8C4B8","#F0ECD8","#E0DCC8"]}},
+  {id:"bark",name:"Bark Chips",grade:"Fine–Coarse",layer:"aeration",seed:66,
+   density:{range:"150–250",mid:200},usedIn:["balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Slow-decomposing organic aerator. Root channeling.",window:"5–15% vol",over:"Above 15%, drainage too aggressive.",note:"Fine grade for indoor. Coarse for tree pits.",
+   visual:{type:"flakes",base:"#180E08",colors:["#7A4820","#6B3E18","#5A3215","#8B5228","#9A5E30"]}},
+  {id:"sand",name:"Coarse River Sand",grade:"1–3mm",layer:"aeration",seed:77,
+   density:{range:"1400–1600",mid:1500},usedIn:["ground_landscape"],
+   role:"Inert drainage corrector. Adds anchoring weight.",window:"8–35% vol",over:"Above 40%, nutrition leaches fast.",note:"Must be coarse 1–3mm. Fine sand worsens compaction.",
+   visual:{type:"granular",base:"#1A1408",minR:1.8,maxR:3.5,colors:["#C4A855","#B8983E","#CEB060","#D4B868","#A8883A"]}},
+  {id:"husk",name:"Rice Husk",grade:"Raw",layer:"aeration",seed:88,
+   density:{range:"90–140",mid:115},usedIn:["tree_pit"],
+   role:"Lightweight silica-rich aerator. Very low cost.",window:"5–8% vol",over:"Above 10%, mix shrinks as husk decomposes.",note:"Short-term mixes only — decomposes in 1–2 years.",
+   visual:{type:"flakes",base:"#161008",colors:["#C8A840","#D4B84A","#BCA038","#E0C850","#A89030"]}},
+  {id:"cocopeat",name:"Cocopeat",grade:"Medium pith",layer:"retention",seed:99,
+   density:{range:"100–180",mid:140},usedIn:["indoor_tropical","balcony_tropical","terrace_garden","green_wall"],
+   role:"Primary water-holding matrix. Holds 8–10x own weight.",window:"12–40% vol",over:"Above 40% without aeration, anaerobic.",note:"Check EC below 0.5 mS/cm before use.",
+   visual:{type:"fibrous",base:"#1E1008",colors:["#8B5E28","#7A5020","#9B6830","#6A4818","#A87838"]}},
+  {id:"vermiculite",name:"Vermiculite",grade:"Fine–medium",layer:"retention",seed:110,
+   density:{range:"64–130",mid:97},usedIn:["indoor_tropical"],
+   role:"Water and nutrient retention. Releases Mg and K slowly.",window:"5–12% vol",over:"Collapses structurally over time.",note:"Retained mainly in interior planter mixes.",
+   visual:{type:"flakes",base:"#181210",colors:["#C8B870","#D4C878","#B8A860","#E0D080","#A89850"]}},
+  {id:"soil",name:"Garden Soil",grade:"Loam / Laterite",layer:"nutrition",seed:121,
+   density:{range:"1100–1300",mid:1200},usedIn:["tree_pit","ground_landscape"],
+   role:"Living mineral foundation with native microbiology and CEC.",window:"0–40% (not weight-critical)",over:"Above 40%, compaction dominates.",note:"Excluded from terrace, facade, indoor. Verify source.",
+   visual:{type:"fine",base:"#2A1808",colors:["#4A3018","#5A3C1E","#3A2410","#6A4828","#382010"]}},
+  {id:"vermicompost",name:"Vermicompost",grade:"Fully cured",layer:"nutrition",seed:132,
+   density:{range:"400–600",mid:500},usedIn:["indoor_tropical","balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Most complete organic amendment — NPK, biology, hormones.",window:"12–18% all mixes",over:"Above 20%, excess N causes soft growth.",note:"Ammonia smell means immature — root burn risk.",
+   visual:{type:"fine",base:"#181008",colors:["#2E2014","#241A0E","#3A2818","#201408","#321E10"]}},
+  {id:"cowdung",name:"Cow Dung Compost",grade:"Well composted",layer:"nutrition",seed:143,
+   density:{range:"450–600",mid:525},usedIn:["tree_pit","ground_landscape"],
+   role:"Bulk organic conditioner. Feeds soil bacteria.",window:"8–12% vol",over:"Raw material causes ammonia burn.",note:"Outdoor and tree pit mixes only.",
+   visual:{type:"fine",base:"#261408",colors:["#4A2E14","#5A381C","#3A2010","#6A3C20","#482A10"]}},
+  {id:"goat",name:"Goat Manure",grade:"Dry pellet",layer:"nutrition",seed:154,
+   density:{range:"500–650",mid:575},usedIn:[],
+   role:"Concentrated dry pellet fertiliser. Higher N than cow dung.",window:"3–5% vol",over:"Above 6%, excess N causes disease.",note:"Excluded from indoor and facade mixes.",
+   visual:{type:"pellets",base:"#1A1008",mid:"#5A3818",light:"#7A5030",dark:"#3A2010"}},
+  {id:"neemcake",name:"Neem Cake",grade:"Pressed residue",layer:"nutrition",seed:165,
+   density:{range:"450–600",mid:525},usedIn:["indoor_tropical","balcony_tropical","terrace_garden","ground_landscape","green_wall"],
+   role:"Slow N release and pest management. Suppresses nematodes.",window:"1–3% all mixes",over:"Above 4%, inhibits germination.",note:"Most critical where fungus gnat risk is high.",
+   visual:{type:"fine",base:"#141A08",colors:["#2E4010","#3A4E18","#223010","#4A5E20","#1E3008"]}},
+  {id:"cottonstalk",name:"Cotton Stalk Biochar",grade:"0–4mm fine",layer:"chemistry",seed:176,usedIn:[],
+   role:"Soil chemistry layer. High CEC. Buffers pH throughout.",window:"3–5% chemistry · up to 10% perlite replacement",over:"Above 8%, pH drifts alkaline.",note:"Pre-charge with vermicompost 2 weeks before.",
+   visual:{type:"fine",base:"#0E0C0A",colors:["#282018","#1E180E","#322818","#1A1408","#2E2416"]}},
+  {id:"dap",name:"DAP Granules",grade:"18-46-0",layer:"chemistry",seed:187,usedIn:["ground_landscape"],
+   role:"High phosphorus starter. Root establishment boost.",window:"0.3–0.8% by weight",over:"Above 60ppm P suppresses mycorrhizal.",note:"Use only where mycorrhizal is not primary.",
+   visual:{type:"granular",base:"#1A1208",minR:2.5,maxR:4.5,colors:["#8A7040","#7A6030","#9A8050","#6A5828","#B09060"]}},
+  {id:"npk",name:"NPK Slow Release",grade:"Coated granule",layer:"chemistry",seed:198,usedIn:["indoor_tropical","balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Nutrition insurance. Temperature-triggered 3–6 month release.",window:"0.3–1.5% by weight",over:"Excess suppresses mycorrhizal.",note:"Facade and terrace need highest dose.",
+   visual:{type:"granular",base:"#181008",minR:2.5,maxR:4,colors:["#2A6A3A","#6A3A20","#2A5A8A","#8A5A20","#3A2A8A"]}},
+  {id:"epsom",name:"Epsom Salt",grade:"MgSO4",layer:"chemistry",seed:209,usedIn:["indoor_tropical","balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Chlorophyll activator. Mg is central atom of chlorophyll.",window:"30–80g per 100L",over:"Excess Mg competes with Ca — tip burn.",note:"Universal — present in all six mixes.",
+   visual:{type:"crystals",base:"#18181E",colors:["#E8E4F0","#F0ECF8","#D8D4E8","#FFFFFF","#C8C4D8"]}},
+  {id:"bonemeal",name:"Bone Meal",grade:"Steamed / ground",layer:"chemistry",seed:220,usedIn:["tree_pit","ground_landscape"],
+   role:"Slow phosphorus for root development and flowering.",window:"1–3% ground and tree pit",over:"Excess P suppresses mycorrhizal.",note:"Not needed in soilless mixes.",
+   visual:{type:"fine",base:"#1E1A14",colors:["#3E3628","#4A4232","#322E20","#58503C","#2C2818"]}},
+  {id:"zinc",name:"Zinc Sulphate",grade:"ZnSO4",layer:"chemistry",seed:261,usedIn:["indoor_tropical","balcony_tropical","tree_pit","green_wall"],
+   role:"Growth hormone precursor. Activates auxins and enzymes.",window:"10–20g per 100L",over:"Toxicity at 50g per 100L.",note:"Deficiency common in Karnataka laterite soils.",
+   visual:{type:"fine",base:"#161820",colors:["#8090B0","#9AA8C8","#6878A0","#B0BCD8","#505870"]}},
+  {id:"iron",name:"Iron Chelate",grade:"FeEDTA",layer:"chemistry",seed:272,usedIn:["indoor_tropical","balcony_tropical","terrace_garden","green_wall"],
+   role:"Plant-available iron at high pH. Stays accessible in alkaline mixes.",window:"10–30g per 100L",over:"Excess at high pH induces Mn deficiency.",note:"Most critical in soilless — biochar raises pH.",
+   visual:{type:"fine",base:"#1A0E08",colors:["#8B3A10","#A04818","#6A2808","#C06020","#7A3010"]}},
+  {id:"mycorrhizal",name:"Mycorrhizal Fungi",grade:"Granular inoculant",layer:"planting",seed:231,
+   density:{range:"Negligible",mid:0},usedIn:["indoor_tropical","balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Root extension network. Multiplies nutrient access 100–1000x.",window:"2–5g per plant at planting",over:"Premixing weeks ahead kills it.",note:"Destroyed by fungicides and high phosphorus.",
+   visual:{type:"fine",base:"#100E18",colors:["#6050A8","#7060B8","#504098","#8070C0","#403080"]}},
+  {id:"trichoderma",name:"Trichoderma",grade:"Powder inoculant",layer:"planting",seed:242,
+   density:{range:"Negligible",mid:0},usedIn:["indoor_tropical","balcony_tropical","terrace_garden","tree_pit","ground_landscape","green_wall"],
+   role:"Biological fungicide. Suppresses Fusarium, Pythium, Rhizoctonia.",window:"5–10g per 100L — can premix",over:"No meaningful over-application risk.",note:"Compatible with mycorrhizal fungi.",
+   visual:{type:"fine",base:"#0A0E0A",colors:["#204020","#2A502A","#183018","#346034","#0E280E"]}},
+  {id:"em",name:"Effective Microorganisms",grade:"Liquid EM1",layer:"planting",seed:253,
+   density:{range:"Negligible",mid:0},usedIn:["tree_pit"],
+   role:"Fermented microbial consortium. Accelerates decomposition.",window:"1:500 dilution at blending",over:"Undiluted inhibits biology.",note:"Most useful when vermicompost is borderline mature.",
+   visual:{type:"fine",base:"#0A1010",colors:["#1A3830","#203E36","#14302A","#2A4E44","#0E2820"]}},
+];
+
+// ── CupSVG ────────────────────────────────────────────────────────────────────
+
+function seededRand(seed) {
+  let s=seed;
+  return ()=>{s=(s*1664525+1013904223)&0x7fffffff;return s/0x7fffffff;};
+}
+
+function CupSVG({ing,size=68,highlighted,accent}) {
+  const v=ing.visual,c=size/2,rv=c-2,f=c-6;
+  const rnd=seededRand(ing.seed||42);
+  const cl="c"+ing.id+size;
+  function mk(){
+    if(v.type==="granular"){
+      const d=[];
+      for(let i=0;i<28;i++){
+        const a=rnd()*Math.PI*2,ds=rnd()*(f-3),r2=v.minR+rnd()*(v.maxR-v.minR),col=v.colors[0|rnd()*v.colors.length];
+        d.push({x:c+Math.cos(a)*ds,y:c+Math.sin(a)*ds,r2,col});
+      }
+      return d.map((p,i)=>(
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r={p.r2} fill={p.col}/>
+          <circle cx={p.x-p.r2*.3} cy={p.y-p.r2*.35} r={p.r2*.3} fill="rgba(255,255,255,.2)"/>
+        </g>
+      ));
+    }
+    if(v.type==="chunks"){
+      const sh=[];
+      for(let i=0;i<v.count;i++){
+        const ax=(rnd()*.8+.1)*f*2-f+c,ay=(rnd()*.8+.1)*f*2-f+c;
+        const sz=v.minSz+rnd()*(v.maxSz-v.minSz),pt=[],sd=4+Math.floor(rnd()*3);
+        for(let j=0;j<sd;j++){const a=(j/sd)*Math.PI*2+rnd()*.8,r2=sz*(.6+rnd()*.4);pt.push((ax+Math.cos(a)*r2).toFixed(1)+","+(ay+Math.sin(a)*r2).toFixed(1));}
+        sh.push({p:pt.join(" "),c:v.colors[0|rnd()*v.colors.length]});
+      }
+      return sh.map((s,i)=>(
+        <g key={i}>
+          <polygon points={s.p} fill={s.c}/>
+          <polygon points={s.p} fill="none" stroke={v.edge} strokeWidth=".6" opacity=".5"/>
+        </g>
+      ));
+    }
+    if(v.type==="balls"){
+      const ps=[[c-14,c-12],[c+4,c-17],[c+17,c-5],[c-20,c+2],[c-3,c+2],[c+16,c+12],[c-14,c+17],[c+4,c+19]];
+      return ps.map((p,i)=>{
+        const r2=8+rnd()*2;
+        return (
+          <g key={i}>
+            <circle cx={p[0]} cy={p[1]+1.5} r={r2} fill="rgba(0,0,0,.3)"/>
+            <circle cx={p[0]} cy={p[1]} r={r2} fill={v.mid}/>
+            <circle cx={p[0]-r2*.3} cy={p[1]-r2*.3} r={r2*.4} fill={v.light} opacity=".6"/>
+          </g>
+        );
+      });
+    }
+    if(v.type==="fibrous"){
+      const ln=[];
+      for(let i=0;i<18;i++){
+        const y=c-f+(i/18)*f*2,w=(rnd()-.5)*10,col=v.colors[0|rnd()*v.colors.length];
+        ln.push({y,w,col,sw:.7+rnd()*.9});
+      }
+      return ln.map((l,i)=>(
+        <path key={i} d={"M "+(c-f+2)+" "+l.y+" Q "+c+" "+(l.y+l.w)+" "+(c+f-2)+" "+l.y} fill="none" stroke={l.col} strokeWidth={l.sw} opacity=".65"/>
+      ));
+    }
+    if(v.type==="fine"){
+      const d=[];
+      for(let i=0;i<55;i++){
+        const a=rnd()*Math.PI*2,ds=rnd()*(f-2),r2=.6+rnd()*1.4,col=v.colors[0|rnd()*v.colors.length];
+        d.push({x:c+Math.cos(a)*ds,y:c+Math.sin(a)*ds,r2,col,op:.5+rnd()*.4});
+      }
+      return d.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={p.r2} fill={p.col} opacity={p.op}/>);
+    }
+    if(v.type==="flakes"){
+      const fl=[];
+      for(let i=0;i<15;i++){
+        const a=rnd()*Math.PI*2,ds=rnd()*(f-4),w=5+rnd()*9,h=1.5+rnd()*2.5,rot=rnd()*180,col=v.colors[0|rnd()*v.colors.length];
+        fl.push({x:c+Math.cos(a)*ds,y:c+Math.sin(a)*ds,w,h,rot,col});
+      }
+      return fl.map((x,i)=>(
+        <rect key={i} x={x.x-x.w/2} y={x.y-x.h/2} width={x.w} height={x.h} rx=".5" fill={x.col} opacity=".82" transform={"rotate("+x.rot+" "+x.x+" "+x.y+")"}/>
+      ));
+    }
+    if(v.type==="crystals"){
+      const cr=[];
+      for(let i=0;i<13;i++){
+        const a=rnd()*Math.PI*2,ds=rnd()*(f-4),sz=3+rnd()*5,rot=rnd()*90,col=v.colors[0|rnd()*v.colors.length];
+        cr.push({x:c+Math.cos(a)*ds,y:c+Math.sin(a)*ds,sz,rot,col});
+      }
+      return cr.map((x,i)=>(
+        <g key={i} transform={"rotate("+x.rot+" "+x.x+" "+x.y+")"}>
+          <polygon points={x.x+","+( x.y-x.sz)+" "+(x.x+x.sz*.38)+","+x.y+" "+x.x+","+(x.y+x.sz)+" "+(x.x-x.sz*.38)+","+x.y} fill={x.col} opacity=".88"/>
+          <polygon points={x.x+","+(x.y-x.sz*.5)+" "+(x.x+x.sz*.18)+","+x.y+" "+x.x+","+(x.y+x.sz*.5)+" "+(x.x-x.sz*.18)+","+x.y} fill="rgba(255,255,255,.35)"/>
+        </g>
+      ));
+    }
+    if(v.type==="pellets"){
+      const ps=[[c-14,c-14],[c+5,c-18],[c+18,c-7],[c-19,c+3],[c-1,c+1],[c+17,c+12],[c-13,c+17],[c+5,c+20]];
+      return ps.map((p,i)=>{
+        const rx=7+rnd()*2,ry=5+rnd()*1.5;
+        return (
+          <g key={i}>
+            <ellipse cx={p[0]} cy={p[1]+1.5} rx={rx} ry={ry*.4} fill="rgba(0,0,0,.25)"/>
+            <ellipse cx={p[0]} cy={p[1]} rx={rx} ry={ry} fill={v.mid}/>
+            <ellipse cx={p[0]-rx*.22} cy={p[1]-ry*.28} rx={rx*.48} ry={ry*.38} fill={v.light} opacity=".45"/>
+          </g>
+        );
+      });
+    }
+    return null;
+  }
+  return (
+    <svg width={size} height={size} viewBox={"0 0 "+size+" "+size} style={{display:"block"}}>
+      {highlighted && <circle cx={c} cy={c} r={rv+2} fill="none" stroke={accent} strokeWidth="2.5" opacity=".9"/>}
+      <circle cx={c} cy={c} r={rv} fill="#C4956A"/>
+      <circle cx={c} cy={c} r={rv} fill="none" stroke="#9A6A3A" strokeWidth="1.5"/>
+      <clipPath id={cl}><circle cx={c} cy={c} r={f}/></clipPath>
+      <g clipPath={"url(#"+cl+")"}>
+        <circle cx={c} cy={c} r={f} fill={v.base}/>
+        {mk()}
+        <circle cx={c-f*.2} cy={c-f*.25} r={f*.55} fill="rgba(255,255,255,.06)"/>
+      </g>
+      <circle cx={c} cy={c} r={f+1} fill="none" stroke="#B07848" strokeWidth="2.2"/>
+      <circle cx={c} cy={c} r={f+2.5} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="1"/>
+    </svg>
+  );
+}
+
+// ── Performance gauge ─────────────────────────────────────────────────────────
+
+function Gauge({label,lo,hi,min,max,unit,accent}) {
+  const pLo=((lo-min)/(max-min)*100).toFixed(1);
+  const pW=((hi-lo)/(max-min)*100).toFixed(1);
+  return (
+    <div style={{marginBottom:10}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+        <span style={{fontSize:8,letterSpacing:".1em",color:"#5A4838",textTransform:"uppercase"}}>{label}</span>
+        <span style={{fontSize:11,fontWeight:700,color:accent}}>{lo}{"–"}{hi}<span style={{fontSize:8,color:"#4A3828",marginLeft:2}}>{unit}</span></span>
+      </div>
+      <div style={{height:5,background:"#1E1610",borderRadius:3,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",left:pLo+"%",width:pW+"%",height:"100%",background:accent,borderRadius:3,opacity:.85}}/>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+        <span style={{fontSize:7,color:"#2E2218"}}>{min}{unit}</span>
+        <span style={{fontSize:7,color:"#2E2218"}}>{max}{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+function PerfCard({env}) {
+  const p=env.perf,a=env.accent;
+  return (
+    <div style={{background:"#12100A",border:"1px solid "+a+"30",borderRadius:8,padding:"14px 16px",margin:"0 16px 6px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <span style={{fontSize:8.5,fontWeight:800,letterSpacing:".16em",color:a,textTransform:"uppercase"}}>Performance Profile</span>
+        <span style={{fontSize:7.5,color:"#3A2A1A",letterSpacing:".05em"}}>{env.name} Engineering Spec</span>
+      </div>
+      <Gauge label="Air Filled Porosity"    lo={p.afp[0]} hi={p.afp[1]} min={0}  max={50}   unit="%" accent={a}/>
+      <Gauge label="Water Holding Capacity" lo={p.whc[0]} hi={p.whc[1]} min={0}  max={100}  unit="%" accent={a}/>
+      <Gauge label="Bulk Density"           lo={p.bd[0]}  hi={p.bd[1]}  min={0}  max={1200} unit=" kg/m3" accent={a}/>
+      <Gauge label="Organic Matter"         lo={p.om[0]}  hi={p.om[1]}  min={0}  max={60}   unit="%" accent={a}/>
+      <Gauge label="pH Range"               lo={p.ph[0]}  hi={p.ph[1]}  min={4}  max={9}    unit="" accent={a}/>
+      <div style={{borderTop:"1px solid #1E1610",paddingTop:9,marginTop:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:8,letterSpacing:".1em",color:"#5A4838",textTransform:"uppercase"}}>Irrigation</span>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{display:"flex",gap:3}}>
+            {[1,2,3,4,5].map(i=>(
+              <div key={i} style={{width:6,height:6,borderRadius:"50%",background:i<=p.dots?a:"#2A1E14"}}/>
+            ))}
+          </div>
+          <span style={{fontSize:9,color:a,fontWeight:600}}>{p.irr}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Small UI components ───────────────────────────────────────────────────────
+
+function TopNav({view,onSwitch}) {
+  const active = v => view===v||(view==="env_detail"&&v==="environments")||(view==="sys_detail"&&v==="systems");
+  return (
+    <div style={{display:"flex",borderBottom:"1px solid #1E1610",background:"#0C0A06"}}>
+      {["environments","systems","ingredients"].map(v=>(
+        <button key={v} onClick={()=>onSwitch(v)} style={{flex:1,padding:"11px 2px",background:"transparent",border:"none",borderBottom:active(v)?"2px solid #D4A853":"2px solid transparent",color:active(v)?"#D4A853":"#4A3828",fontSize:8.5,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",cursor:"pointer",fontFamily:"inherit"}}>
+          {v}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function EnvTile({env,count,onTap}) {
+  return (
+    <div onClick={onTap} style={{background:"#14100A",border:"1px solid "+env.accent+"22",borderRadius:8,marginBottom:10,overflow:"hidden",cursor:"pointer"}}>
+      <div style={{height:3,background:env.grad}}/>
+      <div style={{padding:"14px 16px 12px"}}>
+        <div style={{display:"flex",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:24,fontWeight:800,color:env.accent,letterSpacing:"-0.03em",lineHeight:1,marginBottom:2}}>{env.name}</div>
+            <div style={{fontSize:13,fontWeight:600,color:"#C0B0A0",marginBottom:4}}>{env.title}</div>
+            <div style={{fontSize:11,color:"#4A3828"}}>{env.desc}</div>
+          </div>
+          <div style={{fontSize:18,color:env.accent+"50",paddingTop:4}}>{"›"}</div>
+        </div>
+        <div style={{marginTop:10,fontSize:8.5,color:env.accent+"70",letterSpacing:".12em",textTransform:"uppercase"}}>{count}{" systems ›"}</div>
+      </div>
+    </div>
+  );
+}
+
+function SysCard({sys,envObj,onTap}) {
+  const prev=(sys.layers.rootzone||[]).slice(0,3);
+  const tot=Object.values(sys.layers).flat().length;
+  return (
+    <div onClick={onTap} style={{background:"#14100A",border:"1px solid "+envObj.accent+"22",borderRadius:8,padding:"13px 14px",marginBottom:8,cursor:"pointer"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:"#C0B0A0",marginBottom:2}}>{sys.name}</div>
+          <div style={{fontSize:8.5,color:envObj.accent,letterSpacing:".1em",textTransform:"uppercase"}}>{envObj.name}{" · "}{envObj.title}</div>
+        </div>
+        <div style={{fontSize:16,color:envObj.accent+"50"}}>{"›"}</div>
+      </div>
+      <div style={{display:"flex",gap:7,alignItems:"center"}}>
+        {prev.map(id=>{const i=ING.find(x=>x.id===id);return i?(<CupSVG key={id} ing={i} size={44} highlighted={false} accent={envObj.accent}/>):null;})}
+        <div style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,.03)",border:"1px solid #2A1E14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#4A3828"}}>{tot}</div>
+          <div style={{fontSize:7,color:"#3A2818"}}>INGR</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [sel,  setSel]  = useState(null);
+  const [view, setView] = useState("environments");
+  const [envId,setEnvId]= useState(null);
+  const [sysId,setSysId]= useState(null);
+
+  const selIng = ING.find(i=>i.id===sel);
+  const selLyr = selIng ? LAYER_META[selIng.layer] : null;
+  const isChem = selIng && selIng.layer==="chemistry";
+  const selSys = SYS.find(s=>s.id===sysId);
+  const selEnv = ENV.find(e=>e.id===envId);
+
+  function switchView(v){setView(v);setSysId(null);setEnvId(null);}
+
+  function ViewEnvList(){
+    return (
+      <div style={{padding:"14px 16px 40px"}}>
+        {ENV.map(e=>(
+          <EnvTile key={e.id} env={e} count={SYS.filter(s=>s.env===e.id).length}
+            onTap={()=>{setEnvId(e.id);setView("env_detail");}}/>
+        ))}
+      </div>
+    );
+  }
+
+  function ViewEnvDetail(){
+    if(!selEnv) return null;
+    const envSys=SYS.filter(s=>s.env===selEnv.id);
+    return (
+      <div style={{paddingBottom:selIng?380:48}}>
+        <div style={{padding:"10px 16px 14px",borderBottom:"1px solid #1E1610"}}>
+          <button onClick={()=>setView("environments")} style={{background:"transparent",border:"none",color:"#6A5848",fontSize:18,cursor:"pointer",padding:0,fontFamily:"inherit"}}>{"‹"}</button>
+          <div style={{marginTop:6}}>
+            <div style={{height:3,background:selEnv.grad,borderRadius:2,marginBottom:8,width:40}}/>
+            <div style={{fontSize:9,color:selEnv.accent,letterSpacing:".15em",textTransform:"uppercase",marginBottom:2}}>{selEnv.name}</div>
+            <div style={{fontSize:18,fontWeight:700,color:"#F0EBE3",marginBottom:3}}>{selEnv.title}</div>
+            <div style={{fontSize:11,color:"#4A3828"}}>{selEnv.desc}</div>
+          </div>
+        </div>
+        <div style={{paddingTop:14}}><PerfCard env={selEnv}/></div>
+        <div style={{padding:"10px 16px 6px"}}>
+          <div style={{fontSize:8.5,fontWeight:800,letterSpacing:".15em",color:selEnv.accent,textTransform:"uppercase",marginBottom:8}}>Available Systems</div>
+          {envSys.map(s=>(
+            <SysCard key={s.id} sys={s} envObj={selEnv} onTap={()=>{setSysId(s.id);setView("sys_detail");}}/>
+          ))}
+          {envSys.length===0&&<div style={{fontSize:11,color:"#3A2E24",padding:"12px 0"}}>No systems defined for this environment yet.</div>}
+        </div>
+      </div>
+    );
+  }
+
+  function ViewSysList(){
+    return (
+      <div style={{padding:"14px 16px 40px"}}>
+        {SYS.map(s=>{
+          const e=ENV.find(x=>x.id===s.env);
+          return <SysCard key={s.id} sys={s} envObj={e} onTap={()=>{setSysId(s.id);setView("sys_detail");}}/>;
+        })}
+      </div>
+    );
+  }
+
+  function ViewSysDetail(){
+    if(!selSys) return null;
+    const e=ENV.find(x=>x.id===selSys.env);
+    function goBack(){setSysId(null);setView(envId?"env_detail":"systems");}
+    return (
+      <div style={{paddingBottom:selIng?380:48}}>
+        <div style={{padding:"10px 16px 14px",borderBottom:"1px solid #1E1610"}}>
+          <button onClick={goBack} style={{background:"transparent",border:"none",color:"#6A5848",fontSize:18,cursor:"pointer",padding:0,fontFamily:"inherit"}}>{"‹"}</button>
+          <div style={{marginTop:6}}>
+            <div style={{fontSize:8.5,color:e.accent,letterSpacing:".14em",textTransform:"uppercase",marginBottom:2}}>{e.name}{" · "}{e.title}</div>
+            <div style={{fontSize:18,fontWeight:700,color:"#F0EBE3"}}>{selSys.name}</div>
+          </div>
+        </div>
+        {SLO.map(lk=>{
+          const m=SL[lk],ids=selSys.layers[lk]||[];
+          if(!ids.length) return null;
+          return (
+            <div key={lk} style={{background:m.bg,borderLeft:"3px solid "+m.accent+"28",padding:"14px 16px 18px",marginBottom:2}}>
+              <div style={{fontSize:8.5,fontWeight:800,letterSpacing:".18em",color:m.accent,textTransform:"uppercase",marginBottom:11}}>{m.label}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"12px 8px"}}>
+                {ids.map(id=>{
+                  const i=ING.find(x=>x.id===id);
+                  if(!i) return null;
+                  const s=sel===id;
+                  return (
+                    <div key={id} onClick={()=>setSel(s?null:id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",width:72}}>
+                      <CupSVG ing={i} size={66} highlighted={s} accent={m.accent}/>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:9,fontWeight:600,lineHeight:1.3,color:s?m.accent:"#B0A090"}}>{i.name}</div>
+                        <div style={{fontSize:7.5,color:"#3A2E22",marginTop:1}}>{i.grade}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function ViewIngredients(){
+    return (
+      <div style={{paddingBottom:selIng?380:48}}>
+        {LAYER_ORDER.map(lid=>{
+          const L=LAYER_META[lid],ings=ING.filter(i=>i.layer===lid);
+          return (
+            <div key={lid} style={{background:L.bg,borderLeft:"3px solid "+L.accent+"28",padding:"14px 16px 18px",marginBottom:2}}>
+              <div style={{fontSize:8.5,fontWeight:800,letterSpacing:".18em",color:L.accent,textTransform:"uppercase",marginBottom:11}}>{L.label}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"12px 8px"}}>
+                {ings.map(i=>{
+                  const s=sel===i.id;
+                  return (
+                    <div key={i.id} onClick={()=>setSel(s?null:i.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",width:78}}>
+                      <CupSVG ing={i} size={68} highlighted={s} accent={L.accent}/>
+                      <div style={{textAlign:"center",width:"100%"}}>
+                        <div style={{fontSize:9,fontWeight:600,lineHeight:1.3,color:s?L.accent:"#B0A090"}}>{i.name}</div>
+                        <div style={{fontSize:7.5,color:"#3A2E22",marginTop:1}}>{i.grade}</div>
+                        {lid!=="chemistry"&&i.density&&(
+                          <div style={{background:L.accent+"18",border:"1px solid "+L.accent+"35",borderRadius:3,padding:"2px 5px",fontSize:8,color:i.density.mid===0?"#3A2E24":L.accent,fontWeight:600,textAlign:"center",marginTop:2}}>
+                            {i.density.mid===0?"Negligible":i.density.range+" kg/m3"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        <div style={{margin:"4px 16px 0",height:3,background:"linear-gradient(90deg,#3A2010,#0A0806)",borderRadius:2}}/>
+        <div style={{textAlign:"center",fontSize:8.5,color:"#2A1A10",letterSpacing:".18em",padding:"5px 0 0"}}>{"— GROUND —"}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{fontFamily:"'Inter',-apple-system,sans-serif",background:"#0A0806",minHeight:"100vh",color:"#F0EBE3"}}>
+      <div style={{padding:"18px 18px 12px",borderBottom:"1px solid #1E1610"}}>
+        <div style={{fontSize:8.5,letterSpacing:".2em",color:"#4A3828",textTransform:"uppercase",marginBottom:4}}>{"Aerobase · Zenyard Studio"}</div>
+        <div style={{fontSize:19,fontWeight:700,letterSpacing:"-0.02em"}}>{"Ingredient Intelligence"}</div>
+        <div style={{fontSize:10,color:"#3A2A1A",marginTop:2}}>{"Environment → Performance → System → Layer → Ingredient"}</div>
+      </div>
+
+      <TopNav view={view} onSwitch={switchView}/>
+
+      {view==="environments" && <ViewEnvList/>}
+      {view==="env_detail"   && <ViewEnvDetail/>}
+      {view==="systems"      && <ViewSysList/>}
+      {view==="sys_detail"   && <ViewSysDetail/>}
+      {view==="ingredients"  && <ViewIngredients/>}
+
+      {selIng&&selLyr&&(
+        <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#120E0A",borderTop:"2px solid "+selLyr.accent,padding:"16px 18px 44px",zIndex:100,boxShadow:"0 -20px 50px rgba(0,0,0,.95)",maxHeight:"60vh",overflowY:"auto"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div style={{display:"flex",gap:11,alignItems:"flex-start"}}>
+              <CupSVG ing={selIng} size={44} highlighted={false} accent={selLyr.accent}/>
+              <div>
+                <div style={{fontSize:8.5,color:selLyr.accent,letterSpacing:".1em",textTransform:"uppercase",marginBottom:2}}>{selLyr.label}</div>
+                <div style={{fontSize:15,fontWeight:700,color:"#F0EBE3",lineHeight:1.2}}>{selIng.name}</div>
+                <div style={{fontSize:9.5,color:"#4A3828",marginTop:1}}>{selIng.grade}</div>
+              </div>
+            </div>
+            <button onClick={()=>setSel(null)} style={{background:"transparent",border:"1px solid #2A1E14",borderRadius:"50%",width:27,height:27,color:"#6A5848",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{"×"}</button>
+          </div>
+          {!isChem&&selIng.density&&(
+            <div style={{background:selLyr.accent+"14",border:"1px solid "+selLyr.accent+"30",borderRadius:7,padding:"11px 13px",marginBottom:12}}>
+              <div style={{fontSize:8,letterSpacing:".12em",color:"#4A3828",textTransform:"uppercase",marginBottom:3}}>{"Bulk Density"}</div>
+              <div style={{fontSize:19,fontWeight:800,color:selLyr.accent,lineHeight:1}}>
+                {selIng.density.mid===0?"Negligible":selIng.density.range+" kg/m3"}
+              </div>
+              {selIng.density.mid>0&&(
+                <div style={{fontSize:9.5,color:"#4A3828",marginTop:2}}>
+                  {"Mid "}{selIng.density.mid}{" kg/m3 · At 10%: "}{selIng.density.mid*.1}{" kg/m3"}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{display:"grid",gap:11}}>
+            <div>
+              <div style={{fontSize:8,letterSpacing:".12em",color:"#4A3828",textTransform:"uppercase",marginBottom:4}}>{"Function"}</div>
+              <div style={{fontSize:12,color:"#C0B0A0",lineHeight:1.7}}>{selIng.role}</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+              <div>
+                <div style={{fontSize:8,letterSpacing:".12em",color:"#4A3828",textTransform:"uppercase",marginBottom:3}}>{"Safe Window"}</div>
+                <div style={{fontSize:11,color:selLyr.accent,fontWeight:600,lineHeight:1.5}}>{selIng.window}</div>
+              </div>
+              <div>
+                <div style={{fontSize:8,letterSpacing:".12em",color:"#4A3828",textTransform:"uppercase",marginBottom:3}}>{"Over-Application"}</div>
+                <div style={{fontSize:10.5,color:"#7A4030",lineHeight:1.5}}>{selIng.over}</div>
+              </div>
+            </div>
+            {selIng.usedIn&&selIng.usedIn.length>0&&(
+              <div style={{borderTop:"1px solid #1E1610",paddingTop:11}}>
+                <div style={{fontSize:8,letterSpacing:".12em",color:"#4A3828",textTransform:"uppercase",marginBottom:7}}>{"Used In"}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                  {selIng.usedIn.map(sid=>{
+                    const s=SYS.find(x=>x.id===sid);
+                    const e=s?ENV.find(x=>x.id===s.env):null;
+                    return (
+                      <div key={sid} onClick={()=>{setSysId(sid);setView("sys_detail");setSel(null);}} style={{background:"rgba(255,255,255,.04)",border:"1px solid "+(e?e.accent:"#4A3828")+"40",borderRadius:20,padding:"4px 10px",fontSize:10.5,color:"#B0A090",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{width:4,height:4,borderRadius:"50%",background:e?e.accent:"#4A3828",flexShrink:0}}/>
+                        {s?s.name:sid}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{borderTop:"1px solid #1E1610",paddingTop:11}}>
+              <div style={{fontSize:8,letterSpacing:".12em",color:"#4A3828",textTransform:"uppercase",marginBottom:4}}>{"Field Note"}</div>
+              <div style={{fontSize:10.5,color:"#4A3828",lineHeight:1.6}}>{selIng.note}</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+try {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+} catch (err) {
+  showError('render() threw', err);
+}
+</script>
+</body>
+</html>
