@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aerobase — Material Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B1A17;
+    --ink-soft:#4A473F;
+    --paper:#EDEAE1;
+    --paper-raised:#F7F5EF;
+    --line:#C9C3B4;
+    --line-soft:#DEDACD;
+    --clay:#A66B3F;
+
+    /* axis identity colors — used consistently everywhere a value appears */
+    --ax-structure:#5B6B73;
+    --ax-drainage:#4A7A8C;
+    --ax-aeration:#7FA89E;
+    --ax-retention:#3D5A80;
+    --ax-chemistry:#8C3B2E;
+    --ax-biology:#55684A;
+    --ax-nutrition:#B8834D;
+    --ax-longevity:#3A3630;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--clay);color:var(--paper-raised);}
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ============ HEADER ============ */
+  header{
+    border-bottom:1px solid var(--line);
+    padding:28px 32px 22px;
+    background:var(--paper);
+    position:sticky;top:0;z-index:20;
+  }
+  .header-row{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    max-width:1400px;margin:0 auto;flex-wrap:wrap;gap:16px;
+  }
+  .wordmark{
+    font-family:'Archivo',sans-serif;
+    font-weight:900;
+    font-size:28px;
+    letter-spacing:-0.01em;
+    line-height:1;
+  }
+  .wordmark span{color:var(--clay);}
+  .tagline{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-top:6px;
+  }
+  .search-wrap{position:relative;min-width:260px;flex:1;max-width:420px;}
+  #search{
+    width:100%;
+    padding:11px 14px 11px 34px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    border-radius:3px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--ink);
+    outline:none;
+  }
+  #search:focus{border-color:var(--clay);}
+  .search-wrap::before{
+    content:"⌕";
+    position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    color:var(--ink-soft);font-size:15px;pointer-events:none;
+  }
+  .count-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--ink-soft);
+    white-space:nowrap;
+  }
+
+  /* ============ LAYOUT ============ */
+  .layout{
+    max-width:1400px;margin:0 auto;
+    display:grid;grid-template-columns:220px 1fr;gap:0;
+  }
+  .filters{
+    padding:28px 24px 40px 32px;
+    border-right:1px solid var(--line);
+    align-self:start;
+    position:sticky;top:97px;
+  }
+  .filter-group{margin-bottom:28px;}
+  .filter-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:10px;
+  }
+  .axis-chip{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 8px;margin:0 -8px 2px;border-radius:3px;
+    cursor:pointer;font-size:13px;user-select:none;
+    border:1px solid transparent;
+  }
+  .axis-chip:hover{background:var(--paper-raised);}
+  .axis-chip.active{background:var(--paper-raised);border-color:var(--line);}
+  .axis-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .axis-chip .cnt{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+
+  .tag-chip{
+    display:inline-block;padding:4px 9px;margin:0 6px 6px 0;
+    border:1px solid var(--line);border-radius:20px;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    cursor:pointer;color:var(--ink-soft);
+  }
+  .tag-chip:hover{border-color:var(--clay);color:var(--ink);}
+  .tag-chip.active{background:var(--ink);color:var(--paper-raised);border-color:var(--ink);}
+
+  .clear-filters{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    color:var(--clay);cursor:pointer;text-decoration:underline;
+    display:none;margin-top:4px;
+  }
+  .clear-filters.show{display:inline-block;}
+
+  /* ============ GRID ============ */
+  main{padding:28px 32px 60px;}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:18px;
+    cursor:pointer;
+    transition:border-color .15s ease, transform .15s ease;
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .card:hover{border-color:var(--clay);transform:translateY(-1px);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .card-name{font-weight:600;font-size:15px;line-height:1.3;}
+  .card-variant{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+    margin-top:3px;
+  }
+  .card-tags{display:flex;flex-wrap:wrap;gap:5px;}
+  .mini-tag{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;
+    padding:2px 7px;background:var(--paper);border:1px solid var(--line-soft);
+    border-radius:12px;color:var(--ink-soft);
+  }
+  .card-note{
+    font-size:12.5px;color:var(--ink-soft);line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+
+  .no-results{
+    grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;font-size:13px;
+  }
+
+  /* ============ RADAR (SVG, shared) ============ */
+  svg text{font-family:'IBM Plex Mono',monospace;}
+
+  /* ============ DETAIL PANEL ============ */
+  .overlay{
+    position:fixed;inset:0;background:rgba(27,26,23,0.45);
+    z-index:50;display:none;
+  }
+  .overlay.show{display:block;}
+  .panel{
+    position:fixed;top:0;right:0;bottom:0;
+    width:min(560px,100%);
+    background:var(--paper-raised);
+    box-shadow:-8px 0 32px rgba(0,0,0,0.15);
+    z-index:51;
+    transform:translateX(100%);
+    transition:transform .25s ease;
+    overflow-y:auto;
+    padding:32px;
+  }
+  .panel.show{transform:translateX(0);}
+  .panel-close{
+    position:absolute;top:24px;right:24px;
+    width:32px;height:32px;border-radius:50%;
+    border:1px solid var(--line);background:var(--paper);
+    cursor:pointer;font-size:16px;color:var(--ink-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .panel-close:hover{border-color:var(--clay);color:var(--ink);}
+  .panel-eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .panel-title{
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:26px;
+    line-height:1.15;margin-bottom:4px;padding-right:50px;
+  }
+  .panel-variant{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--clay);margin-bottom:24px;}
+
+  .radar-wrap{display:flex;justify-content:center;margin-bottom:24px;}
+
+  .fingerprint-list{margin-bottom:26px;}
+  .fp-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line-soft);}
+  .fp-row:last-child{border-bottom:none;}
+  .fp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .fp-label{font-size:12.5px;flex:1;}
+  .fp-bar-track{width:90px;height:5px;background:var(--paper);border-radius:3px;overflow:hidden;}
+  .fp-bar-fill{height:100%;border-radius:3px;}
+  .fp-value{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);width:26px;text-align:right;}
+
+  .panel-section{margin-bottom:22px;}
+  .panel-section-label{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:0.1em;color:var(--ink-soft);margin-bottom:8px;
+  }
+  .panel-note{font-size:13.5px;line-height:1.65;color:var(--ink);}
+  .panel-systems{display:flex;flex-wrap:wrap;gap:6px;}
+
+  .curve-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.03em;
+    padding:5px 10px;border-radius:3px;margin-bottom:10px;
+  }
+  .curve-badge .dot{width:7px;height:7px;border-radius:50%;}
+  .curve-inverted-u{background:rgba(140,59,46,0.12);color:var(--ax-chemistry);}
+  .curve-threshold{background:rgba(166,107,63,0.14);color:var(--clay);}
+  .curve-linear{background:rgba(91,107,115,0.12);color:var(--ax-structure);}
+  .curve-min-dose{background:rgba(85,104,74,0.14);color:var(--ax-biology);}
+
+  .tbd-note{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);
+    margin:10px 0 12px;padding:8px 10px;background:var(--paper);border:1px dashed var(--line);border-radius:3px;
+  }
+  .mitigant-pill{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    padding:4px 9px;background:var(--paper);border:1px solid var(--line-soft);border-radius:12px;
+    color:var(--ink-soft);
+  }
+
+  .card-curve-tag{
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.04em;
+    padding:2px 7px;border-radius:10px;display:inline-block;
+  }
+  .system-pill{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    padding:5px 10px;background:var(--paper);border:1px solid var(--line);border-radius:3px;
+  }
+
+  @media (max-width:800px){
+    .layout{grid-template-columns:1fr;}
+    .filters{
+      position:static;border-right:none;border-bottom:1px solid var(--line);
+      padding:20px 24px;display:flex;flex-wrap:wrap;gap:24px;
+    }
+    .filter-group{margin-bottom:0;}
+    main{padding:20px;}
+    .panel{width:100%;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+
+  :focus-visible{outline:2px solid var(--clay);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <div class="wordmark">AEROBASE<span>·</span></div>
+      <div class="tagline">Material Library — Engineering Fingerprint Reference (no formulation engine yet)</div>
+      <div class="tagline" style="margin-top:3px;color:var(--clay);">v1 canonical dataset · relative 0–10 scores, not lab measurements · 0 currently means both "no contribution" and "N/A" — see note in source</div>
+    </div>
+    <div class="search-wrap">
+      <input id="search" class="mono" type="text" placeholder="Search materials, variants, tags…" autocomplete="off">
+    </div>
+    <div class="count-badge" id="countBadge"></div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="filters">
+    <div class="filter-group">
+      <div class="filter-label">Engineering Axis</div>
+      <div id="axisFilters"></div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Drainage Layer — Min Size</div>
+      <div id="sizeFilters"></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:6px;line-height:1.5;">Particle-size minimums are a drainage-layer constraint, not a general material property — other applications aren't size-gated in this dataset yet.</div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Suitable Systems</div>
+      <div id="systemFilters"></div>
+    </div>
+    <div class="clear-filters" id="clearFilters">Clear all filters</div>
+  </aside>
+
+  <main>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="panel" id="panel"></div>
+
+<script>
+/* ============================================================
+   DATA MODEL
+   Each material is a single canonical record. Sections/views in
+   the UI are computed from the fingerprint — a material is never
+   duplicated to "belong" to a layer; it simply scores high on
+   whichever axes are true of it, and shows up wherever it's
+   relevant.
+
+   Starter dataset — fingerprint values (1–10) are illustrative
+   placeholders following Dhiraj's 8-axis schema and should be
+   calibrated against real formulation data before this becomes
+   the source of truth.
+   ============================================================ */
+
+const AXES = [
+  {key:'structure',  label:'Structure',       color:'var(--ax-structure)'},
+  {key:'drainage',   label:'Drainage',        color:'var(--ax-drainage)'},
+  {key:'aeration',   label:'Aeration',        color:'var(--ax-aeration)'},
+  {key:'retention',  label:'Water Retention', color:'var(--ax-retention)'},
+  {key:'chemistry',  label:'Chemistry',       color:'var(--ax-chemistry)'},
+  {key:'biology',    label:'Biology',         color:'var(--ax-biology)'},
+  {key:'nutrition',  label:'Nutrition',       color:'var(--ax-nutrition)'},
+  {key:'longevity',  label:'Longevity',       color:'var(--ax-longevity)'},
+];
+
+const SYSTEMS = ['Ground','Tree Pit','Terrace','Facade','Indoor'];
+
+/* Canonical Aerobase v1 engineering fingerprint dataset.
+   Values are intentionally relative (0–10), representing engineering
+   contribution rather than laboratory measurements. This is the
+   current source of truth; future versions may replace individual
+   scores with measured data.
+
+   Known open issue (not yet modeled): for several chemical/biological
+   inputs, a 0 means "not applicable" rather than "no contribution"
+   (e.g. Structure/Drainage/Aeration/Water for DAP or Trichoderma
+   aren't meaningfully zero, they're just not what that material does).
+   A future pass should distinguish N/A from a true 0 so the engine
+   doesn't score an irrelevant axis as a poor-performing one. */
+const MATERIALS = [
+  {
+    name:'Prosopis Biochar', variant:'20–30 mm', grade:'Coarse',
+    fp:{structure:10,drainage:10,aeration:9,retention:4,chemistry:8,biology:7,nutrition:1,longevity:10},
+    size:{min_mm:20,max_mm:30},
+    inclusion:{min_pct:5,optimal_pct:[10,20],max_pct:30,curve:'inverted-u',limiting_mechanism:'Nitrogen immobilization above roughly 30–35% inclusion without a matched N source; retention ceiling limits use in non-irrigated profiles.',mitigated_by:['Vermicompost','Cow Dung Compost','NPK Slow Release'],source:'Container-substrate biochar literature reports a wide working range (10–50% v/v) depending on feedstock/species; 10–20% optimal with a 30% conservative ceiling reflects the more consistent middle of that range, not a hard measured limit for Prosopis specifically.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['biochar','coarse','structural'],
+    notes:'Coarsest Prosopis fraction — top structural and drainage contributor in the library, with strong chemistry and biology carry despite minimal direct nutrition. Prosopis is one of the few feedstocks in this library available at this particle size at all. Bulk density is comparable to or lighter than LECA, so it isn\u2019t weight-excluded from Facade/Indoor the way stone aggregate is — earlier system tags here were inconsistent about that.'
+  },
+  {
+    name:'Prosopis Biochar', variant:'10–15 mm', grade:'Medium',
+    fp:{structure:9,drainage:9,aeration:9,retention:5,chemistry:8,biology:7,nutrition:1,longevity:10},
+    size:{min_mm:10,max_mm:15},
+    inclusion:{min_pct:5,optimal_pct:[10,20],max_pct:30,curve:'inverted-u',limiting_mechanism:'Nitrogen immobilization above roughly 30–35% inclusion without a matched N source; retention ceiling limits use in non-irrigated profiles.',mitigated_by:['Vermicompost','Cow Dung Compost','NPK Slow Release'],source:'Same container-substrate biochar literature range as the 20–30mm grade — not yet differentiated by particle size in published studies.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['biochar','medium','structural'],
+    notes:'Mid-grade Prosopis fraction — nearly matches the 20–30mm grade on structure and drainage with slightly higher retention. Still meets a 10mm+ minimum-size requirement, unlike the fine-fraction biochars below.'
+  },
+  {
+    name:'Corn Cob Biochar', variant:'1–4 mm', grade:'Fine',
+    fp:{structure:8,drainage:8,aeration:8,retention:6,chemistry:7,biology:7,nutrition:1,longevity:7},
+    size:{min_mm:1,max_mm:4},
+    inclusion:{min_pct:5,optimal_pct:[10,20],max_pct:30,curve:'inverted-u',limiting_mechanism:'Nitrogen immobilization at high inclusion without a matched N source.',mitigated_by:['Vermicompost','Cow Dung Compost','NPK Slow Release'],source:'Container-substrate biochar literature range (10–50% v/v reported, feedstock/species dependent); 10–20% optimal / 30% conservative ceiling used as the starter default.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['biochar','fine','balanced'],
+    notes:'Strong all-round fine biochar — high structure and chemistry with better retention than the Prosopis grades, at lower longevity.'
+  },
+  {
+    name:'Cotton Stalk Biochar', variant:'0–4 mm', grade:'Fine',
+    fp:{structure:8,drainage:8,aeration:8,retention:5,chemistry:7,biology:7,nutrition:1,longevity:7},
+    size:{min_mm:0,max_mm:4},
+    inclusion:{min_pct:5,optimal_pct:[10,20],max_pct:30,curve:'inverted-u',limiting_mechanism:'Nitrogen immobilization at high inclusion without a matched N source.',mitigated_by:['Vermicompost','Cow Dung Compost','NPK Slow Release'],source:'Container-substrate biochar literature range (10–50% v/v reported, feedstock/species dependent); 10–20% optimal / 30% conservative ceiling used as the starter default.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['biochar','fine','balanced'],
+    notes:'Near-identical profile to Corn Cob Biochar with slightly lower retention — interchangeable in most blended layers.'
+  },
+  {
+    name:'Rice Husk Biochar', variant:null, grade:null,
+    fp:{structure:7,drainage:8,aeration:8,retention:5,chemistry:8,biology:6,nutrition:1,longevity:6},
+    inclusion:{min_pct:5,optimal_pct:[10,20],max_pct:30,curve:'inverted-u',limiting_mechanism:'Nitrogen immobilization at high inclusion without a matched N source.',mitigated_by:['Vermicompost','Cow Dung Compost','NPK Slow Release'],source:'Container-substrate biochar literature range (10–50% v/v reported, feedstock/species dependent); 10–20% optimal / 30% conservative ceiling used as the starter default.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['biochar','fine','chemistry'],
+    notes:'Lower structure and longevity than the other biochars but the highest chemistry score of the fine-fraction group.'
+  },
+  {
+    name:'LECA', variant:'8–16 mm', grade:'Standard',
+    fp:{structure:10,drainage:10,aeration:10,retention:4,chemistry:1,biology:1,nutrition:0,longevity:10},
+    size:{min_mm:8,max_mm:16},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['mineral','lightweight','structural'],
+    notes:'Maximum structure, drainage and aeration, fully inert chemically and biologically. Pure physical role — near-permanent in the profile. ⚠ Size is an ESTIMATE (8–16mm is the common horticultural-grade range cited across LECA suppliers, one industry report puts 5–15mm at ~45% of global output) — not your specific SKU\u2019s spec sheet.'
+  },
+  {
+    name:'LECA', variant:'10–25 mm', grade:'Coarse',
+    fp:{structure:10,drainage:10,aeration:10,retention:3,chemistry:1,biology:1,nutrition:0,longevity:10},
+    size:{min_mm:10,max_mm:25},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['mineral','lightweight','structural'],
+    notes:'⚠ ESTIMATED, not canonical — same family as the 8–16mm grade with slightly lower retention at the coarser end. LECA is commercially produced up to 25mm in this grade band (larger "boulder" LECA exists at 100–500mm but is a different construction product, not a growing-media aggregate). This is the grade that actually clears a 20mm+ drainage-layer cutoff in a lightweight/container context — the 8–16mm grade alone can\u2019t.'
+  },
+  {
+    name:'Bark Chips', variant:null, grade:null,
+    fp:{structure:8,drainage:8,aeration:8,retention:6,chemistry:4,biology:6,nutrition:1,longevity:7},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'inverted-u',limiting_mechanism:'Fresh, undercomposted bark ties up surface nitrogen the same way raw rice husk does, though less aggressively — aged/composted bark is much safer at higher inclusion than green bark.',mitigated_by:['Vermicompost','NPK Slow Release']},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['bark','organic','bulking'],
+    notes:'Strong structural and drainage bulking agent with meaningfully more biology contribution than the biochars. ⚠ Facade/Indoor inclusion here is a softer judgment call than the biochars\u2019 — bark mulch works fine as a surface layer everywhere, but fresh bark\u2019s N tie-up and potential for fungal/pest issues in a sealed indoor pot are real, unquantified factors.'
+  },
+  {
+    name:'Perlite', variant:'Horticultural Grade', grade:null,
+    fp:{structure:7,drainage:10,aeration:10,retention:3,chemistry:1,biology:0,nutrition:0,longevity:10},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Terrace','Facade','Indoor'],
+    tags:['mineral','lightweight','aeration'],
+    notes:'Maximum drainage and aeration, fully inert biologically and nearly inert chemically — purely physical role in the mix. Excluded from Ground/Tree Pit here not for weight but the opposite reason: it\u2019s light enough to float and wash or blow away in open, uncontained systems. Fine once capped or contained.'
+  },
+  {
+    name:'Coarse River Sand', variant:null, grade:null,
+    fp:{structure:9,drainage:8,aeration:6,retention:1,chemistry:1,biology:0,nutrition:0,longevity:10},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit'],
+    tags:['mineral','structural','inert'],
+    notes:'Very high structure with essentially zero water, chemistry, biology, or nutrition contribution. Permanent, inert filler.'
+  },
+  {
+    name:'Construction Aggregate', variant:'6 mm', grade:'Chips',
+    fp:{structure:7,drainage:7,aeration:6,retention:0,chemistry:1,biology:0,nutrition:0,longevity:10},
+    size:{min_mm:6,max_mm:6},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace'],
+    tags:['mineral','structural','inert','crushed-stone'],
+    notes:'⚠ ESTIMATED, not canonical — no measured fingerprint provided yet. Crushed granite/basalt aggregate ("blue metal", colloquially "jelly" in Indian usage — IS-code fine grade). Inert like LECA and Coarse River Sand; finest of the four standard sizes, so lowest structure/drainage/aeration of the family. Terrace-suitable at this grade because a functional drainage layer only needs a shallow bed of 6mm chips — the coarser grades below need more depth than most terrace planters have.'
+  },
+  {
+    name:'Construction Aggregate', variant:'12 mm', grade:'Chips',
+    fp:{structure:8,drainage:8,aeration:7,retention:0,chemistry:1,biology:0,nutrition:0,longevity:10},
+    size:{min_mm:12,max_mm:12},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace'],
+    tags:['mineral','structural','inert','crushed-stone'],
+    notes:'⚠ ESTIMATED, not canonical — no measured fingerprint provided yet. Crushed granite/basalt aggregate ("blue metal", colloquially "jelly" in Indian usage — IS-code standard grade). Clears the 10mm drainage-layer minimum. Still shallow enough to work in a terrace planter\u2019s typical depth, unlike the 20/40mm grades.'
+  },
+  {
+    name:'Construction Aggregate', variant:'20 mm', grade:'Aggregate',
+    fp:{structure:9,drainage:9,aeration:8,retention:0,chemistry:1,biology:0,nutrition:0,longevity:10},
+    size:{min_mm:20,max_mm:20},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit'],
+    tags:['mineral','structural','inert','crushed-stone'],
+    notes:'⚠ ESTIMATED, not canonical — no measured fingerprint provided yet. Crushed granite/basalt aggregate ("blue metal", colloquially "jelly" in Indian usage). The standard IS-code size for drainage-layer aggregate in Indian construction and landscape work. Excluded from Terrace here on a depth argument, not weight (stone density doesn\u2019t change with grain size) — a 20mm drainage layer needs more profile depth than most terrace planters have. Worth confirming against your actual planter depths rather than treating as fixed.'
+  },
+  {
+    name:'Construction Aggregate', variant:'40 mm', grade:'Aggregate',
+    fp:{structure:10,drainage:10,aeration:9,retention:0,chemistry:1,biology:0,nutrition:0,longevity:10},
+    size:{min_mm:40,max_mm:40},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Ground','Tree Pit'],
+    tags:['mineral','structural','inert','crushed-stone'],
+    notes:'⚠ ESTIMATED, not canonical — no measured fingerprint provided yet. Crushed granite/basalt aggregate ("blue metal", colloquially "jelly" in Indian usage), coarsest standard grade — maximum drainage and aeration, typically the base course beneath a drainage layer. Same depth-based Terrace exclusion as the 20mm grade — a judgment call, not a hard rule.'
+  },
+  {
+    name:'Rice Husk', variant:'Raw', grade:null,
+    fp:{structure:5,drainage:7,aeration:7,retention:4,chemistry:3,biology:4,nutrition:1,longevity:3},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'inverted-u',limiting_mechanism:'Still decomposing (unburnt) — pulls nitrogen from the mix harder than its biochar form until fully broken down.',mitigated_by:['Vermicompost','NPK Slow Release','DAP']},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['organic','raw','bulking'],
+    notes:'Unburnt rice husk — moderate structure and drainage, but far lower longevity than its biochar form since it hasn\u2019t been pyrolyzed. ⚠ Facade/Indoor here is a lower-confidence call than the biochars\u2019 — loose husk is light enough to float/mat on watering (same mechanism that keeps Perlite/Vermiculite out of open Ground), so it belongs mixed into a substrate, not used loose, in a contained system.'
+  },
+  {
+    name:'Cocopeat', variant:null, grade:null,
+    fp:{structure:3,drainage:3,aeration:5,retention:10,chemistry:5,biology:6,nutrition:1,longevity:4},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'inverted-u',limiting_mechanism:'Residual sodium/salt content at high inclusion.',mitigated_by:['Coarse River Sand','LECA']},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['organic','renewable','retention'],
+    notes:'Top water-retention material in the library. Low structure and drainage — pairs with structural/drainage materials rather than standing alone.'
+  },
+  {
+    name:'Vermiculite', variant:'Medium Grade', grade:null,
+    fp:{structure:3,drainage:2,aeration:3,retention:10,chemistry:6,biology:1,nutrition:0,longevity:9},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'linear',limiting_mechanism:null,mitigated_by:[]},
+    systems:['Terrace','Facade','Indoor'],
+    tags:['mineral','lightweight','retention'],
+    notes:'Matches Cocopeat on retention but from a mineral, higher-longevity base with meaningfully more chemistry (CEC) contribution. Same floating/erosion exclusion from open Ground as Perlite — fine in a contained Terrace bed or pot, risky loose in open weather.'
+  },
+  {
+    name:'Garden Soil', variant:null, grade:null,
+    fp:{structure:7,drainage:4,aeration:4,retention:6,chemistry:8,biology:8,nutrition:5,longevity:8},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'inverted-u',limiting_mechanism:'Compaction and anaerobic pockets at high inclusion, plus pathogen load risk.',mitigated_by:['Perlite','LECA','Bark Chips']},
+    systems:['Ground','Tree Pit'],
+    tags:['soil','organic','balanced'],
+    notes:'The most balanced generalist in the dataset — no single standout axis, but solid contribution across all eight. Excluded from Terrace/Facade/Indoor for two compounding reasons, not one: it\u2019s heavy, and straight garden soil compacts and drains poorly once confined in a container — a container-specific failure mode, not just a weight limit.'
+  },
+  {
+    name:'Vermicompost', variant:null, grade:null,
+    fp:{structure:2,drainage:1,aeration:1,retention:6,chemistry:9,biology:10,nutrition:10,longevity:4},
+    inclusion:{min_pct:10,optimal_pct:[10,20],max_pct:25,curve:'inverted-u',limiting_mechanism:'Salt/EC buildup and ammonia burn at high inclusion.',mitigated_by:['LECA','Coarse River Sand','Bark Chips'],source:'Vermicompost potting-mix trials report optimal doses clustering 10–25% by volume, with inhibitory effects reported by growers at 40%+ in several studies; a 20g worm-castings-per-10cm-pot-style rule of thumb from extension guidance points the same direction.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['organic','biology','nutrition'],
+    notes:'Ties for the highest biology score and is the single highest-nutrition material in the library. Negligible structural role — dose as an active layer.'
+  },
+  {
+    name:'Cow Dung Compost', variant:null, grade:null,
+    fp:{structure:3,drainage:2,aeration:2,retention:6,chemistry:8,biology:8,nutrition:8,longevity:4},
+    inclusion:{min_pct:10,optimal_pct:[10,20],max_pct:25,curve:'inverted-u',limiting_mechanism:'Salt/EC buildup and ammonia burn at high inclusion.',mitigated_by:['LECA','Coarse River Sand','Bark Chips'],source:'Inferred from the wider compost/manure literature (general soil incorporation guidance of 20–30% v/v, with ornamental/container studies showing quality loss at 30–60% peat replacement) — not measured for cow dung compost specifically.'},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['organic','manure','nutrition'],
+    notes:'High biology and nutrition close behind Vermicompost, with essentially no structural contribution.'
+  },
+  {
+    name:'Goat Manure', variant:null, grade:null,
+    fp:{structure:2,drainage:1,aeration:1,retention:5,chemistry:8,biology:8,nutrition:9,longevity:3},
+    inclusion:{min_pct:5,optimal_pct:[10,15],max_pct:20,curve:'inverted-u',limiting_mechanism:'Salt/EC buildup and ammonia burn at high inclusion — manures run hotter (higher ammonia) than screened compost, so the ceiling is set lower.',mitigated_by:['LECA','Coarse River Sand','Bark Chips'],source:'Inferred from the compost/manure literature by analogy; not measured for goat manure specifically — treat as a cautious placeholder until tested.'},
+    systems:['Ground','Tree Pit','Terrace','Facade'],
+    tags:['organic','manure','nutrition'],
+    notes:'Slightly higher nutrition than Cow Dung Compost but lower retention and longevity — a faster-cycling amendment. Indoor excluded on odor grounds — a soft, debatable call, not a hard physical constraint like the weight-based exclusions elsewhere.'
+  },
+  {
+    name:'Neem Cake', variant:null, grade:null,
+    fp:{structure:1,drainage:1,aeration:1,retention:2,chemistry:7,biology:8,nutrition:7,longevity:3},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'inverted-u',limiting_mechanism:'Allelopathic/pesticidal compounds can suppress germination or soil biology in excess.',mitigated_by:['Vermicompost','Mycorrhiza']},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['organic','amendment','biology'],
+    notes:'Low retention relative to the other organic amendments — functions more as a biology/nutrition and pest-suppressive input than a moisture carrier.'
+  },
+  {
+    name:'Bone Meal', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:7,biology:4,nutrition:8,longevity:8},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'threshold',pct_not_applicable:true,dose_note:'Fertilizers and mineral supplements aren\'t dosed as % of mix volume in the literature — they\'re rated in ppm, lb/yd³, or g per plant/pot. The % framework in this schema doesn\'t fit this material class; needs a separate dose-rate field.',limiting_mechanism:'Excess phosphorus can lock out iron/zinc uptake.',mitigated_by:['Iron Chelate','Zinc Sulphate']},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['fertilizer','slow-release','phosphorus'],
+    notes:'First fully physical-axis-zero material — structure, drainage, aeration and water are not applicable to a fine mineral fertilizer input. High longevity, slow-release nutrition.'
+  },
+  {
+    name:'NPK Slow Release', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:8,biology:0,nutrition:10,longevity:8},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'threshold',pct_not_applicable:true,dose_note:'Fertilizers and mineral supplements aren\'t dosed as % of mix volume in the literature — they\'re rated in ppm, lb/yd³, or g per plant/pot. The % framework in this schema doesn\'t fit this material class; needs a separate dose-rate field.',limiting_mechanism:'Salt burn and nutrient antagonism at overdose.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['fertilizer','slow-release','macro-nutrient'],
+    notes:'Maximum nutrition score in the dataset with no biology contribution — a coated slow-release macronutrient input, not a biological one.'
+  },
+  {
+    name:'DAP', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:8,biology:0,nutrition:10,longevity:8},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'threshold',pct_not_applicable:true,dose_note:'Fertilizers and mineral supplements aren\'t dosed as % of mix volume in the literature — they\'re rated in ppm, lb/yd³, or g per plant/pot. The % framework in this schema doesn\'t fit this material class; needs a separate dose-rate field.',limiting_mechanism:'Salt burn and nutrient antagonism at overdose; faster-release than NPK Slow Release, so the risk window is shorter.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['fertilizer','fast-release','macro-nutrient'],
+    notes:'Same fingerprint as NPK Slow Release in this v1 dataset — differentiation between fast- and slow-release kinetics is a candidate for a future axis.'
+  },
+  {
+    name:'Epsom Salt', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:8,biology:0,nutrition:5,longevity:10},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'threshold',pct_not_applicable:true,dose_note:'Fertilizers and mineral supplements aren\'t dosed as % of mix volume in the literature — they\'re rated in ppm, lb/yd³, or g per plant/pot. The % framework in this schema doesn\'t fit this material class; needs a separate dose-rate field.',limiting_mechanism:'Excess magnesium can antagonize calcium/potassium uptake.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['fertilizer','micro-nutrient','magnesium'],
+    notes:'Highest longevity among the mineral supplements — a stable magnesium/sulphur correction input with moderate nutrition contribution.'
+  },
+  {
+    name:'Iron Chelate', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:9,biology:0,nutrition:4,longevity:10},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'threshold',pct_not_applicable:true,dose_note:'Fertilizers and mineral supplements aren\'t dosed as % of mix volume in the literature — they\'re rated in ppm, lb/yd³, or g per plant/pot. The % framework in this schema doesn\'t fit this material class; needs a separate dose-rate field.',limiting_mechanism:'Overdose can cause micronutrient toxicity and antagonize other trace elements.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['fertilizer','micro-nutrient','chelated'],
+    notes:'Highest chemistry score among the micronutrient correctors — used for chlorosis correction in container and confined-volume systems.'
+  },
+  {
+    name:'Zinc Sulphate', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:8,biology:0,nutrition:4,longevity:10},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'threshold',pct_not_applicable:true,dose_note:'Fertilizers and mineral supplements aren\'t dosed as % of mix volume in the literature — they\'re rated in ppm, lb/yd³, or g per plant/pot. The % framework in this schema doesn\'t fit this material class; needs a separate dose-rate field.',limiting_mechanism:'Overdose can cause zinc toxicity and antagonize iron/manganese uptake.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['fertilizer','micro-nutrient','zinc'],
+    notes:'Mirrors Iron Chelate\u2019s profile at slightly lower chemistry — a standard zinc-deficiency correction input.'
+  },
+  {
+    name:'Mycorrhiza', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:1,chemistry:6,biology:10,nutrition:7,longevity:6},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'min-dose',pct_not_applicable:true,dose_note:'Inoculants are dosed by propagule count and weight/volume of carrier (e.g. published rates cluster around 150g per 50L of media, or g per plant), not % of mix. Needs a separate dose-rate field rather than a percentage.',limiting_mechanism:'Risk is underuse or redundant reapplication, not overdose — needs a minimum effective inclusion to establish, not a ceiling.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['inoculant','biology','microdose'],
+    notes:'Ties for the highest biology score in the dataset with a notably higher longevity than the other microbial inputs — establishes a root-zone relationship that persists.'
+  },
+  {
+    name:'Trichoderma', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:4,biology:10,nutrition:3,longevity:5},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'min-dose',pct_not_applicable:true,dose_note:'Inoculants are dosed by propagule count and weight/volume of carrier (e.g. published rates cluster around 150g per 50L of media, or g per plant), not % of mix. Needs a separate dose-rate field rather than a percentage.',limiting_mechanism:'Risk is underuse or redundant reapplication, not overdose — needs a minimum effective inclusion to establish, not a ceiling.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['inoculant','biology','biocontrol'],
+    notes:'Matches Mycorrhiza and Vermicompost on peak biology score but with lower chemistry and nutrition carry — a biocontrol-first inoculant.'
+  },
+  {
+    name:'Effective Microorganisms (EM)', variant:null, grade:null,
+    fp:{structure:0,drainage:0,aeration:0,retention:0,chemistry:4,biology:9,nutrition:2,longevity:2},
+    inclusion:{min_pct:null,optimal_pct:null,max_pct:null,curve:'min-dose',pct_not_applicable:true,dose_note:'Inoculants are dosed by propagule count and weight/volume of carrier (e.g. published rates cluster around 150g per 50L of media, or g per plant), not % of mix. Needs a separate dose-rate field rather than a percentage.',limiting_mechanism:'Risk is underuse or redundant reapplication, not overdose — short functional life means it needs repeat application rather than a one-time ceiling.',mitigated_by:[]},
+    systems:['Ground','Tree Pit','Terrace','Facade','Indoor'],
+    tags:['inoculant','biology','short-cycle'],
+    notes:'Lowest longevity in the entire dataset — a short-cycle biological activator meant for repeat application rather than one-time inclusion.'
+  },
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let state = {
+  query:'',
+  activeAxis:null,   // axis key or null
+  activeSystem:null,   // single-select, like axis and size
+  minSize:null,   // filter: only show materials whose coarsest fraction >= this many mm
+};
+
+/* ============================================================
+   RENDER: FILTER SIDEBAR
+   ============================================================ */
+function renderAxisFilters(){
+  const el = document.getElementById('axisFilters');
+  el.innerHTML = AXES.map(ax=>{
+    const cnt = MATERIALS.filter(m=>m.fp[ax.key]>=6).length;
+    const active = state.activeAxis===ax.key ? 'active' : '';
+    return `<div class="axis-chip ${active}" data-axis="${ax.key}">
+      <span class="axis-dot" style="background:${ax.color}"></span>
+      <span>${ax.label}</span>
+      <span class="cnt">${cnt}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.axis-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const key = chip.dataset.axis;
+      state.activeAxis = state.activeAxis===key ? null : key;
+      renderAll();
+    });
+  });
+}
+
+const SIZE_THRESHOLDS = [
+  {label:'Any size', value:null},
+  {label:'≥ 5 mm', value:5},
+  {label:'≥ 10 mm', value:10},
+  {label:'≥ 20 mm', value:20},
+];
+
+function renderSizeFilters(){
+  const el = document.getElementById('sizeFilters');
+  el.innerHTML = SIZE_THRESHOLDS.map(t=>{
+    const active = state.minSize===t.value ? 'active' : '';
+    return `<span class="tag-chip ${active}" data-size="${t.value}">${t.label}</span>`;
+  }).join('');
+  el.querySelectorAll('.tag-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const v = chip.dataset.size;
+      state.minSize = v==='null' ? null : Number(v);
+      renderAll();
+    });
+  });
+}
+
+function renderSystemFilters(){
+  const el = document.getElementById('systemFilters');
+  el.innerHTML = SYSTEMS.map(s=>{
+    const active = state.activeSystem===s ? 'active' : '';
+    return `<span class="tag-chip ${active}" data-system="${s}">${s}</span>`;
+  }).join('');
+  el.querySelectorAll('.tag-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const s = chip.dataset.system;
+      state.activeSystem = state.activeSystem===s ? null : s;
+      renderAll();
+    });
+  });
+}
+
+/* ============================================================
+   FILTER LOGIC
+   ============================================================ */
+function getFiltered(){
+  return MATERIALS.filter(m=>{
+    if(state.query){
+      const hay = `${m.name} ${m.variant||''} ${m.grade||''} ${m.tags.join(' ')}`.toLowerCase();
+      if(!hay.includes(state.query.toLowerCase())) return false;
+    }
+    if(state.activeAxis && m.fp[state.activeAxis] < 6) return false;
+    if(state.activeSystem && !m.systems.includes(state.activeSystem)) return false;
+    if(state.minSize){
+      if(!m.size || m.size.max_mm==null || m.size.max_mm < state.minSize) return false;
+    }
+    return true;
+  });
+}
+
+/* ============================================================
+   RADAR (SVG spider chart) — the fingerprint glyph
+   ============================================================ */
+function buildRadar(fp, size, opts={}){
+  const n = AXES.length;
+  const cx = size/2, cy = size/2;
+  const r = size/2 - (opts.pad ?? 14);
+  const angle = i => (Math.PI*2*i/n) - Math.PI/2;
+
+  const pt = (i,val) => {
+    const a = angle(i);
+    const rad = (val/10) * r;
+    return [cx + rad*Math.cos(a), cy + rad*Math.sin(a)];
+  };
+
+  // grid rings
+  let rings = '';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const pts = AXES.map((ax,i)=>pt(i,10*f).join(',')).join(' ');
+    rings += `<polygon points="${pts}" fill="none" stroke="var(--line-soft)" stroke-width="1"/>`;
+  });
+
+  // spokes
+  let spokes = '';
+  AXES.forEach((ax,i)=>{
+    const [x,y] = pt(i,10);
+    spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--line-soft)" stroke-width="1"/>`;
+  });
+
+  // data polygon
+  const dataPts = AXES.map((ax,i)=>pt(i, fp[ax.key]).join(',')).join(' ');
+  const fillPoly = `<polygon points="${dataPts}" fill="var(--clay)" fill-opacity="0.16" stroke="var(--clay)" stroke-width="2"/>`;
+
+  // axis vertex dots
+  let dots = '';
+  AXES.forEach((ax,i)=>{
+    const [x,y] = pt(i, fp[ax.key]);
+    dots += `<circle cx="${x}" cy="${y}" r="3" fill="${ax.color}"/>`;
+  });
+
+  // labels (only for large radar)
+  let labels = '';
+  if(opts.labels){
+    AXES.forEach((ax,i)=>{
+      const a = angle(i);
+      const lr = r + 22;
+      const x = cx + lr*Math.cos(a);
+      const y = cy + lr*Math.sin(a);
+      const anchor = Math.cos(a) > 0.3 ? 'start' : Math.cos(a) < -0.3 ? 'end' : 'middle';
+      labels += `<text x="${x}" y="${y}" font-size="10" fill="var(--ink-soft)" text-anchor="${anchor}" dominant-baseline="middle">${ax.label}</text>`;
+    });
+  }
+
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    ${rings}${spokes}${fillPoly}${dots}${labels}
+  </svg>`;
+}
+
+/* ============================================================
+   RENDER: GRID
+   ============================================================ */
+function renderGrid(){
+  const list = getFiltered();
+  const grid = document.getElementById('grid');
+  document.getElementById('countBadge').textContent = `${list.length} / ${MATERIALS.length} materials`;
+
+  const clearBtn = document.getElementById('clearFilters');
+  const anyFilter = state.query || state.activeAxis || state.activeSystem || state.minSize;
+  clearBtn.classList.toggle('show', !!anyFilter);
+
+  if(!list.length){
+    grid.innerHTML = `<div class="no-results">No materials match these filters.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map((m,idx)=>`
+    <div class="card" data-idx="${MATERIALS.indexOf(m)}">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${m.name}</div>
+          ${m.variant ? `<div class="card-variant">${m.variant}${m.grade ? ' · '+m.grade : ''}</div>` : ''}
+        </div>
+        ${buildRadar(m.fp, 64, {pad:8})}
+      </div>
+      ${m.inclusion ? `<span class="card-curve-tag ${(CURVE_META[m.inclusion.curve]||{}).class||''}">${(CURVE_META[m.inclusion.curve]||{}).label||m.inclusion.curve}${m.inclusion.max_pct!=null ? ' · ≤'+m.inclusion.max_pct+'%' : ''}</span>` : ''}
+      <div class="card-tags">${m.tags.map(t=>`<span class="mini-tag">${t}</span>`).join('')}</div>
+      <div class="card-note">${m.notes}</div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.card').forEach(card=>{
+    card.addEventListener('click', ()=> openPanel(MATERIALS[card.dataset.idx]));
+  });
+}
+
+/* ============================================================
+   INCLUSION / CURVE SECTION
+   ============================================================ */
+const CURVE_META = {
+  'inverted-u': {label:'Inverted-U — peaks, then harms', class:'curve-inverted-u'},
+  'threshold':  {label:'Threshold — narrow safe dose', class:'curve-threshold'},
+  'linear':     {label:'Linear — no meaningful ceiling', class:'curve-linear'},
+  'min-dose':   {label:'Min-Dose — underuse is the risk', class:'curve-min-dose'},
+};
+
+function buildInclusionSection(inc){
+  const meta = CURVE_META[inc.curve] || {label:inc.curve, class:''};
+  const hasNumbers = inc.min_pct!=null || inc.optimal_pct!=null || inc.max_pct!=null;
+  const rangeText = Array.isArray(inc.optimal_pct) ? `${inc.optimal_pct[0]}–${inc.optimal_pct[1]}%` : '';
+  return `
+    <div class="panel-section">
+      <div class="panel-section-label">Inclusion Behaviour</div>
+      <div class="curve-badge ${meta.class}"><span class="dot" style="background:currentColor"></span>${meta.label}</div>
+      ${inc.limiting_mechanism ? `<div class="panel-note">${inc.limiting_mechanism}</div>` : ''}
+      ${hasNumbers ? `
+        <div class="fp-row" style="border-bottom:none;padding-top:10px;">
+          <span class="fp-label mono" style="flex:none;font-size:11.5px;color:var(--ink-soft);">Optimal</span>
+          <span class="mono" style="font-size:12.5px;font-weight:600;margin-left:8px;">${rangeText || '—'}</span>
+          <span class="fp-label mono" style="flex:none;font-size:11.5px;color:var(--ink-soft);margin-left:18px;">Ceiling</span>
+          <span class="mono" style="font-size:12.5px;font-weight:600;margin-left:8px;">${inc.max_pct!=null ? inc.max_pct+'%' : '—'}</span>
+        </div>
+      ` : ''}
+      ${inc.pct_not_applicable ? `<div class="tbd-note">${inc.dose_note}</div>` : (!hasNumbers ? `<div class="tbd-note">% ranges not yet set — needs formulation data or trial results before this becomes a hard limit.</div>` : '')}
+      ${inc.source ? `<div class="panel-note" style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;font-style:italic;">${inc.source}</div>` : ''}
+      ${inc.mitigated_by && inc.mitigated_by.length ? `
+        <div class="panel-section-label" style="margin-top:14px;">Offsets Well With</div>
+        <div class="panel-systems">${inc.mitigated_by.map(x=>`<span class="mitigant-pill">${x}</span>`).join('')}</div>
+      ` : ''}
+    </div>
+  `;
+}
+
+/* ============================================================
+   DETAIL PANEL
+   ============================================================ */
+function openPanel(m){
+  const panel = document.getElementById('panel');
+  const overlay = document.getElementById('overlay');
+
+  const fpRows = AXES.map(ax=>{
+    const val = m.fp[ax.key];
+    return `<div class="fp-row">
+      <span class="fp-dot" style="background:${ax.color}"></span>
+      <span class="fp-label">${ax.label}</span>
+      <span class="fp-bar-track"><span class="fp-bar-fill" style="width:${val*10}%;background:${ax.color}"></span></span>
+      <span class="fp-value">${val}/10</span>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="panel-close" id="panelClose">×</div>
+    <div class="panel-eyebrow">Material Record</div>
+    <div class="panel-title">${m.name}</div>
+    <div class="panel-variant">${m.variant || 'No variant'}${m.grade ? ' · '+m.grade+' grade' : ''}</div>
+
+    <div class="radar-wrap">${buildRadar(m.fp, 280, {labels:true, pad:44})}</div>
+
+    <div class="panel-section-label">Engineering Fingerprint</div>
+    <div class="fingerprint-list">${fpRows}</div>
+
+    ${m.inclusion ? buildInclusionSection(m.inclusion) : ''}
+
+    <div class="panel-section">
+      <div class="panel-section-label">Application Notes</div>
+      <div class="panel-note">${m.notes}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Suitable Systems</div>
+      <div class="panel-systems">${m.systems.map(s=>`<span class="system-pill">${s}</span>`).join('')}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Tags</div>
+      <div class="panel-systems">${m.tags.map(t=>`<span class="system-pill">${t}</span>`).join('')}</div>
+    </div>
+  `;
+
+  panel.classList.add('show');
+  overlay.classList.add('show');
+  document.getElementById('panelClose').addEventListener('click', closePanel);
+}
+
+function closePanel(){
+  document.getElementById('panel').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+}
+document.getElementById('overlay').addEventListener('click', closePanel);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePanel(); });
+
+/* ============================================================
+   SEARCH + CLEAR
+   ============================================================ */
+document.getElementById('search').addEventListener('input', e=>{
+  state.query = e.target.value;
+  renderGrid();
+});
+document.getElementById('clearFilters').addEventListener('click', ()=>{
+  state = {query:'', activeAxis:null, activeSystem:null, minSize:null};
+  document.getElementById('search').value = '';
+  renderAll();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function renderAll(){
+  renderAxisFilters();
+  renderSizeFilters();
+  renderSystemFilters();
+  renderGrid();
+}
+renderAll();
+</script>
+
+</body>
+</html>
